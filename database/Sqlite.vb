@@ -1,7 +1,7 @@
 ﻿Imports System.Data.SQLite
 
 Public Module Sqlite
-    Private ReadOnly _connectionString As String = "Data Source=rest_api_cs.db;Version=3;"
+    Private ReadOnly _connectionString As String = "Data Source=rest_api_vb.db;Version=3;"
 
     Public Function Connect() As SQLiteConnection
         Dim connection As New SQLiteConnection(_connectionString)
