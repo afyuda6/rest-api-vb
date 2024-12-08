@@ -61,7 +61,7 @@ Public Module User
         Dim requestBody = Await New IO.StreamReader(request.InputStream).ReadToEndAsync()
         Dim userData = HttpUtility.ParseQueryString(requestBody)
 
-        If userData("name") Is Nothing Then
+        If String.IsNullOrWhiteSpace(userData("name")) Then
             response.StatusCode = CInt(HttpStatusCode.BadRequest)
             response.ContentType = "application/json"
             Dim errorResponse = New With {
@@ -99,7 +99,7 @@ Public Module User
         Dim requestBody = Await New IO.StreamReader(request.InputStream).ReadToEndAsync()
         Dim userData = HttpUtility.ParseQueryString(requestBody)
 
-        If userData("name") Is Nothing OrElse userData("id") Is Nothing Then
+        If String.IsNullOrWhiteSpace(userData("name")) OrElse String.IsNullOrWhiteSpace(userData("id")) Then
             response.StatusCode = CInt(HttpStatusCode.BadRequest)
             response.ContentType = "application/json"
             Dim errorResponse = New With {
@@ -138,7 +138,7 @@ Public Module User
         Dim requestBody = Await New IO.StreamReader(request.InputStream).ReadToEndAsync()
         Dim userData = HttpUtility.ParseQueryString(requestBody)
 
-        If userData("id") Is Nothing Then
+        If String.IsNullOrWhiteSpace(userData("id")) Then
             response.StatusCode = CInt(HttpStatusCode.BadRequest)
             response.ContentType = "application/json"
             Dim errorResponse = New With {
