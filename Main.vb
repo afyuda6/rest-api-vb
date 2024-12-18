@@ -2,22 +2,21 @@ Imports System.Net
 Imports System.Threading.Tasks
 
 Public Module MainModule
-    Private _listener As HttpListener
-    Private _baseUrl As String = "http://localhost:6013/"
+    Private listener As HttpListener
+    Private baseUrl As String = "http://localhost:6013/"
 
     Public Sub Main()
         InitializeDatabase()
-        _listener = New HttpListener()
-        _listener.Prefixes.Add(_baseUrl)
-        _listener.Start()
+        listener = New HttpListener()
+        listener.Prefixes.Add(baseUrl)
+        listener.Start()
         Task.Run(AddressOf ListenForRequests)
         Console.ReadLine()
     End Sub
 
     Private Async Function ListenForRequests() As Task
         While True
-            Dim context = Await _listener.GetContextAsync()
-            Await UserHandle(context)
+            Await UserHandle(listener)
         End While
     End Function
 End Module

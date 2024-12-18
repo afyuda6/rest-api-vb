@@ -140,7 +140,8 @@ Public Module User
         End If
     End Function
     
-    Public Async Function UserHandle(context As HttpListenerContext) As Task
+    Public Async Function UserHandle(listener As HttpListener) As Task
+        Dim context = Await listener.GetContextAsync()
         Dim request = context.Request
         Dim response = context.Response
         Try
