@@ -1,22 +1,20 @@
-Imports System.Net
-Imports System.Threading.Tasks
+Imports Microsoft.AspNetCore.Hosting
+Imports Microsoft.Extensions.Hosting
 
 Public Module MainModule
-    Private listener As HttpListener
-    Private baseUrl As String = "http://localhost:6013/"
-
-    Public Sub Main()
+    Public Sub Main(args As String())
         InitializeDatabase()
-        listener = New HttpListener()
-        listener.Prefixes.Add(baseUrl)
-        listener.Start()
-        Task.Run(AddressOf ListenForRequests)
-        Console.ReadLine()
+        Dim port As Integer = If(Environment.GetEnvironmentVariable("PORT"), 6013)
+        CreateHostBuilder(args, port).Build().Run()
     End Sub
 
-    Private Async Function ListenForRequests() As Task
-        While True
-            Await UserHandle(listener)
-        End While
+    Private Function CreateHostBuilder(args As String(), port As Integer) As IHostBuilder
+        Return Host.CreateDefaultBuilder(args).
+            ConfigureWebHostDefaults(
+                Sub(webBuilder)
+                    webBuilder.UseKestrel()
+                    webBuilder.UseUrls($"http://0.0.0.0:{port}")
+                    webBuilder.Configure(Sub(app) ConfigureApp(app))
+                End Sub)
     End Function
 End Module

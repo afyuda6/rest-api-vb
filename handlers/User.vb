@@ -2,9 +2,11 @@
 Imports System.Net
 Imports System.Text
 Imports System.Web
+Imports Microsoft.AspNetCore.Builder
+Imports Microsoft.AspNetCore.Http
 
 Public Module User
-    Private Async Function HandleReadUsers(response As HttpListenerResponse) As Task
+    Public Async Function HandleReadUsers(response As HttpResponse) As Task
         Dim users As New List(Of Object)
         Using connection = Connect()
             Dim command As New SQLiteCommand("SELECT id, name FROM users;", connection)
@@ -26,13 +28,12 @@ Public Module User
         }
         Dim jsonResponse = Json.JsonSerializer.Serialize(responseBody)
         Dim buffer = Encoding.UTF8.GetBytes(jsonResponse)
-        response.ContentLength64 = buffer.Length
-        Await response.OutputStream.WriteAsync(buffer, 0, buffer.Length)
-        response.OutputStream.Close()
+        response.ContentLength = buffer.Length
+        Await response.Body.WriteAsync(buffer, 0, buffer.Length)
     End Function
 
-    Private Async Function HandleCreateUser(request As HttpListenerRequest, response As HttpListenerResponse) As Task
-        Dim requestBody = Await New IO.StreamReader(request.InputStream).ReadToEndAsync()
+    Private Async Function HandleCreateUser(request As HttpRequest, response As HttpResponse) As Task
+        Dim requestBody = Await New IO.StreamReader(request.Body).ReadToEndAsync()
         Dim userData = HttpUtility.ParseQueryString(requestBody)
         If String.IsNullOrWhiteSpace(userData("name")) Then
             response.StatusCode = CInt(HttpStatusCode.BadRequest)
@@ -44,9 +45,8 @@ Public Module User
             }
             Dim jsonResponse = Json.JsonSerializer.Serialize(errorResponse)
             Dim buffer = Encoding.UTF8.GetBytes(jsonResponse)
-            response.ContentLength64 = buffer.Length
-            Await response.OutputStream.WriteAsync(buffer, 0, buffer.Length)
-            response.OutputStream.Close()
+            response.ContentLength = buffer.Length
+            Await response.Body.WriteAsync(buffer, 0, buffer.Length)
         Else
             Using connection = Connect()
                 Dim command As New SQLiteCommand("INSERT INTO users (name) VALUES (@Name);", connection)
@@ -61,14 +61,13 @@ Public Module User
             }
             Dim jsonResponse = Json.JsonSerializer.Serialize(responseBody)
             Dim buffer = Encoding.UTF8.GetBytes(jsonResponse)
-            response.ContentLength64 = buffer.Length
-            Await response.OutputStream.WriteAsync(buffer, 0, buffer.Length)
-            response.OutputStream.Close()
+            response.ContentLength = buffer.Length
+            Await response.Body.WriteAsync(buffer, 0, buffer.Length)
         End If
     End Function
 
-    Private Async Function HandleUpdateUser(request As HttpListenerRequest, response As HttpListenerResponse) As Task
-        Dim requestBody = Await New IO.StreamReader(request.InputStream).ReadToEndAsync()
+    Private Async Function HandleUpdateUser(request As HttpRequest, response As HttpResponse) As Task
+        Dim requestBody = Await New IO.StreamReader(request.Body).ReadToEndAsync()
         Dim userData = HttpUtility.ParseQueryString(requestBody)
         If String.IsNullOrWhiteSpace(userData("name")) OrElse String.IsNullOrWhiteSpace(userData("id")) Then
             response.StatusCode = CInt(HttpStatusCode.BadRequest)
@@ -80,9 +79,8 @@ Public Module User
             }
             Dim jsonResponse = Json.JsonSerializer.Serialize(errorResponse)
             Dim buffer = Encoding.UTF8.GetBytes(jsonResponse)
-            response.ContentLength64 = buffer.Length
-            Await response.OutputStream.WriteAsync(buffer, 0, buffer.Length)
-            response.OutputStream.Close()
+            response.ContentLength = buffer.Length
+            Await response.Body.WriteAsync(buffer, 0, buffer.Length)
         Else
             Using connection = Connect()
                 Dim command As New SQLiteCommand("UPDATE users SET name = @Name WHERE id = @Id;", connection)
@@ -98,14 +96,13 @@ Public Module User
             }
             Dim jsonResponse = Json.JsonSerializer.Serialize(responseBody)
             Dim buffer = Encoding.UTF8.GetBytes(jsonResponse)
-            response.ContentLength64 = buffer.Length
-            Await response.OutputStream.WriteAsync(buffer, 0, buffer.Length)
-            response.OutputStream.Close()
+            response.ContentLength = buffer.Length
+            Await response.Body.WriteAsync(buffer, 0, buffer.Length)
         End If
     End Function
 
-    Private Async Function HandleDeleteUser(request As HttpListenerRequest, response As HttpListenerResponse) As Task
-        Dim requestBody = Await New IO.StreamReader(request.InputStream).ReadToEndAsync()
+    Private Async Function HandleDeleteUser(request As HttpRequest, response As HttpResponse) As Task
+        Dim requestBody = Await New IO.StreamReader(request.Body).ReadToEndAsync()
         Dim userData = HttpUtility.ParseQueryString(requestBody)
         If String.IsNullOrWhiteSpace(userData("id")) Then
             response.StatusCode = CInt(HttpStatusCode.BadRequest)
@@ -117,9 +114,8 @@ Public Module User
             }
             Dim jsonResponse = Json.JsonSerializer.Serialize(errorResponse)
             Dim buffer = Encoding.UTF8.GetBytes(jsonResponse)
-            response.ContentLength64 = buffer.Length
-            Await response.OutputStream.WriteAsync(buffer, 0, buffer.Length)
-            response.OutputStream.Close()
+            response.ContentLength = buffer.Length
+            Await response.Body.WriteAsync(buffer, 0, buffer.Length)
         Else
             Using connection = Connect()
                 Dim command As New SQLiteCommand("DELETE FROM users WHERE id = @Id;", connection)
@@ -134,55 +130,49 @@ Public Module User
             }
             Dim jsonResponse = Json.JsonSerializer.Serialize(responseBody)
             Dim buffer = Encoding.UTF8.GetBytes(jsonResponse)
-            response.ContentLength64 = buffer.Length
-            Await response.OutputStream.WriteAsync(buffer, 0, buffer.Length)
-            response.OutputStream.Close()
+            response.ContentLength = buffer.Length
+            Await response.Body.WriteAsync(buffer, 0, buffer.Length)
         End If
     End Function
-    
-    Public Async Function UserHandle(listener As HttpListener) As Task
-        Dim context = Await listener.GetContextAsync()
-        Dim request = context.Request
-        Dim response = context.Response
-        Try
-            If request.Url.AbsolutePath.Equals("/users") OrElse request.Url.AbsolutePath.Equals("/users/") Then
-                Select Case request.HttpMethod
+
+    Public Sub ConfigureApp(app As IApplicationBuilder)
+        app.UseRouting()
+        app.UseEndpoints(Sub(endpoints)
+            endpoints.Map("/users", Async Function(context As HttpContext)
+                Select Case context.Request.Method.ToUpper()
                     Case "GET"
-                        Await HandleReadUsers(response)
+                        Await HandleReadUsers(context.Response)
                     Case "POST"
-                        Await HandleCreateUser(request, response)
+                        Await HandleCreateUser(context.Request, context.Response)
                     Case "PUT"
-                        Await HandleUpdateUser(request, response)
+                        Await HandleUpdateUser(context.Request, context.Response)
                     Case "DELETE"
-                        Await HandleDeleteUser(request, response)
+                        Await HandleDeleteUser(context.Request, context.Response)
                     Case Else
-                        response.StatusCode = CInt(HttpStatusCode.MethodNotAllowed)
-                        response.ContentType = "application/json"
-                        Dim errorResponse = New With {
+                        context.response.StatusCode = CInt(HttpStatusCode.MethodNotAllowed)
+                        context.response.ContentType = "application/json"
+                        Dim responseBody = New With {
                                 .status = "Method Not Allowed",
                                 .code = 405
                                 }
-                        Dim jsonResponse = Json.JsonSerializer.Serialize(errorResponse)
+                        Dim jsonResponse = Json.JsonSerializer.Serialize(responseBody)
                         Dim buffer = Encoding.UTF8.GetBytes(jsonResponse)
-                        response.ContentLength64 = buffer.Length
-                        Await response.OutputStream.WriteAsync(buffer, 0, buffer.Length)
-                        response.OutputStream.Close()
+                        context.Response.ContentLength = buffer.Length
+                        Await context.Response.Body.WriteAsync(buffer, 0, buffer.Length)
                 End Select
-            Else
-                response.StatusCode = CInt(HttpStatusCode.NotFound)
-                response.ContentType = "application/json"
-                Dim errorResponse = New With {
+            End Function)
+            endpoints.MapFallback(Async Function(context)
+                context.response.StatusCode = CInt(HttpStatusCode.NotFound)
+                context.response.ContentType = "application/json"
+                Dim responseBody = New With {
                         .status = "Not Found",
                         .code = 404
                         }
-                Dim jsonResponse = Json.JsonSerializer.Serialize(errorResponse)
+                Dim jsonResponse = Json.JsonSerializer.Serialize(responseBody)
                 Dim buffer = Encoding.UTF8.GetBytes(jsonResponse)
-                response.ContentLength64 = buffer.Length
-                Await response.OutputStream.WriteAsync(buffer, 0, buffer.Length)
-                response.OutputStream.Close()
-            End If
-        Catch ex As Exception
-            response.OutputStream.Close()
-        End Try
-    End Function
+                context.Response.ContentLength = buffer.Length
+                Await context.Response.Body.WriteAsync(buffer, 0, buffer.Length)
+            End Function)
+        End Sub)
+    End Sub
 End Module

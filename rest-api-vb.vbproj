@@ -4,9 +4,11 @@
         <OutputType>Exe</OutputType>
         <RootNamespace>rest_api_vb</RootNamespace>
         <TargetFramework>net9.0</TargetFramework>
+        <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
     </PropertyGroup>
 
     <ItemGroup>
+      <PackageReference Include="Microsoft.AspNetCore.App" />
       <PackageReference Include="System.Data.SQLite" Version="1.0.119" />
     </ItemGroup>
 
