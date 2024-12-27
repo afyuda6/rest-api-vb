@@ -4,6 +4,7 @@ Imports System.Text
 Imports System.Web
 Imports Microsoft.AspNetCore.Builder
 Imports Microsoft.AspNetCore.Http
+Imports Microsoft.Extensions.DependencyInjection
 
 Public Module User
     Public Async Function HandleReadUsers(response As HttpResponse) As Task
@@ -136,6 +137,7 @@ Public Module User
     End Function
 
     Public Sub ConfigureApp(app As IApplicationBuilder)
+        app.UseCors("AllowSpecificOrigins")
         app.UseRouting()
         app.UseEndpoints(Sub(endpoints)
             endpoints.Map("/users", Async Function(context As HttpContext)
@@ -148,6 +150,14 @@ Public Module User
                         Await HandleUpdateUser(context.Request, context.Response)
                     Case "DELETE"
                         Await HandleDeleteUser(context.Request, context.Response)
+                    Case "OPTIONS"
+                        context.response.StatusCode = CInt(HttpStatusCode.OK)
+                        context.response.ContentType = "application/json"
+                        Dim responseBody = ""
+                        Dim jsonResponse = Json.JsonSerializer.Serialize(responseBody)
+                        Dim buffer = Encoding.UTF8.GetBytes(jsonResponse)
+                        context.Response.ContentLength = buffer.Length
+                        Await context.Response.Body.WriteAsync(buffer, 0, buffer.Length)
                     Case Else
                         context.response.StatusCode = CInt(HttpStatusCode.MethodNotAllowed)
                         context.response.ContentType = "application/json"
@@ -174,5 +184,15 @@ Public Module User
                 Await context.Response.Body.WriteAsync(buffer, 0, buffer.Length)
             End Function)
         End Sub)
+    End Sub
+    
+    Public Sub ConfigureServices(services As IServiceCollection)
+        services.AddCors(Sub(options)
+            options.AddPolicy("AllowSpecificOrigins",
+                Sub(policy)
+                    policy.AllowAnyOrigin().WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS").WithHeaders("Content-Type")
+                End Sub)
+        End Sub)
+        services.AddRouting()
     End Sub
 End Module

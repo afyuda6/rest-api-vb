@@ -15,6 +15,7 @@ Public Module MainModule
                     webBuilder.UseKestrel()
                     webBuilder.UseUrls($"http://0.0.0.0:{port}")
                     webBuilder.Configure(Sub(app) ConfigureApp(app))
+                    webBuilder.ConfigureServices(Sub(services) ConfigureServices(services))
                 End Sub)
     End Function
 End Module
